@@ -19,7 +19,7 @@ DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 OLLAMA_HOST = "ollama"
 OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
 OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
-OLLAMA_GENERATION_MODEL = os.getenv("OLLAMA_GENERATION_MODEL", "llama2")
+OLLAMA_GENERATION_MODEL = os.getenv("OLLAMA_GENERATION_MODEL", "llama3")
 
 # --- Функции для работы с RAG ---
 
