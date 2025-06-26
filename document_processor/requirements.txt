@@ -1,0 +1,5 @@
+python-docx             # Для чтения файлов .docx
+python-dotenv           # Для чтения переменных окружения
+psycopg2-binary         # PostgreSQL адаптер для Python
+requests                # Для HTTP-запросов к Ollama API
+pgvector
