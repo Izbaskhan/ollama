@@ -22,6 +22,14 @@ services:
       - ollama_models:/root/.ollama
     restart: unless-stopped
     tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: [ '0' ]
+              capabilities: [ gpu ]
+
 
   document_processor: # Новое имя сервиса
     build: ./document_processor # Указываем Docker Compose собрать образ из папки 'document_processor'

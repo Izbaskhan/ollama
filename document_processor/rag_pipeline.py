@@ -4,7 +4,7 @@ import requests
 from dotenv import load_dotenv
 import json
 import uuid
-from pgvector.psycopg2 import register_vector # <-- ДОБАВЛЕНО
+from pgvector.psycopg2 import register_vector
 
 # Загружаем переменные окружения из .env файла
 load_dotenv()
@@ -90,7 +90,6 @@ def retrieve_documents(conn, query_embedding, top_k=5):
             ORDER BY distance
             LIMIT %s;
             """
-            # Здесь psycopg2 теперь будет знать, что query_embedding нужно преобразовать в тип VECTOR
             cur.execute(sql, (query_embedding, top_k))
             results = cur.fetchall()
             documents = []
@@ -107,6 +106,21 @@ def retrieve_documents(conn, query_embedding, top_k=5):
         print(f"Ошибка при извлечении документов из БД: {e}")
         return []
 
+def check_documents_exist(conn, file_name):
+    """Проверяет, есть ли уже чанки для данного файла в базе данных."""
+    try:
+        with conn.cursor() as cur:
+            sql = """
+            SELECT COUNT(*) FROM documents
+            WHERE metadata->>'file_name' = %s;
+            """
+            cur.execute(sql, (file_name,))
+            count = cur.fetchone()[0]
+            return count > 0
+    except Exception as e:
+        print(f"Ошибка при проверке наличия документов в БД: {e}")
+        return False
+
 def generate_rag_response(query, retrieved_docs, model=OLLAMA_GENERATION_MODEL):
     """Генерирует ответ с использованием контекста из извлеченных документов."""
     context = "\n\n".join([doc["content"] for doc in retrieved_docs])
@@ -119,9 +133,9 @@ def generate_rag_response(query, retrieved_docs, model=OLLAMA_GENERATION_MODEL):
 
 Ответ:"""
 
-    print("\n--- Отправляемый промпт в Ollama ---") # <-- ДОБАВИТЬ ЭТУ СТРОКУ
-    print(prompt)                                 # <-- ДОБАВИТЬ ЭТУ СТРОКУ
-    print("------------------------------------\n") # <-- ДОБАВИТЬ ЭТУ СТРОКУ
+    print("\n--- Отправляемый промпт в Ollama ---")
+    print(prompt)
+    print("------------------------------------\n")
     url = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}/api/generate"
     headers = {"Content-Type": "application/json"}
     data = {
@@ -144,15 +158,6 @@ if __name__ == "__main__":
         print(f"Ошибка: Файл '{txt_file}' не найден в директории 'document_processor/'. Пожалуйста, поместите его туда.")
         exit(1)
 
-    print(f"Извлечение текста из '{txt_file}'...")
-    full_text = extract_text_from_txt(txt_file)
-    if full_text is None:
-        exit(1)
-    print(f"Извлечено {len(full_text)} символов.")
-
-    chunks = chunk_text(full_text)
-    print(f"Разбито на {len(chunks)} чанков.")
-
     conn = None
     try:
         conn = psycopg2.connect(
@@ -162,19 +167,32 @@ if __name__ == "__main__":
             host=DB_HOST,
             port=DB_PORT
         )
-        register_vector(conn) # <-- ДОБАВЛЕНО
+        register_vector(conn)
         print("Успешное подключение к PostgreSQL.")
 
-        print("Векторизация и сохранение чанков в БД...")
-        for i, chunk in enumerate(chunks):
-            print(f"Обработка чанка {i+1}/{len(chunks)}...")
-            embedding = get_embedding(chunk)
-            if embedding:
-                source_info = {"file_name": txt_file, "chunk_index": i}
-                store_document_in_db(conn, chunk, embedding, source_info)
-            else:
-                print(f"Пропущен чанк {i+1} из-за ошибки векторизации.")
-        print("Процесс векторизации и сохранения завершен.")
+        # --- Проверка на существование чанков ---
+        if check_documents_exist(conn, txt_file):
+            print(f"Чанки для файла '{txt_file}' уже существуют в базе данных. Пропускаем загрузку.")
+        else:
+            print(f"Извлечение текста из '{txt_file}'...")
+            full_text = extract_text_from_txt(txt_file)
+            if full_text is None:
+                exit(1)
+            print(f"Извлечено {len(full_text)} символов.")
+
+            chunks = chunk_text(full_text)
+            print(f"Разбито на {len(chunks)} чанков.")
+
+            print("Векторизация и сохранение чанков в БД...")
+            for i, chunk in enumerate(chunks):
+                print(f"Обработка чанка {i+1}/{len(chunks)}...")
+                embedding = get_embedding(chunk)
+                if embedding:
+                    source_info = {"file_name": txt_file, "chunk_index": i}
+                    store_document_in_db(conn, chunk, embedding, source_info)
+                else:
+                    print(f"Пропущен чанк {i+1} из-за ошибки векторизации.")
+            print("Процесс векторизации и сохранения завершен.")
 
         print("\n--- Демонстрация RAG-запроса ---")
         while True:
