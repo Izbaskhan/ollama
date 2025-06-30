@@ -35,7 +35,7 @@ def extract_text_from_txt(txt_path):
         print(f"Ошибка при чтении файла '{txt_path}': {e}")
         return None
 
-def chunk_text(text, chunk_size=500, overlap=50):
+def chunk_text(text, chunk_size=50, overlap=10):
     """Разбивает текст на чанки с перекрытием."""
     words = text.split()
     chunks = []
