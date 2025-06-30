@@ -223,6 +223,12 @@ if __name__ == "__main__":
 
             if retrieved_documents:
                 print(f"Найдено {len(retrieved_documents)} релевантных документов.")
+                for doc in retrieved_documents:
+                    # Добавлено отображение расстояния
+                    print(f"  - ID: {doc['id']}, Расстояние: {doc['distance']:.4f}, Контент: '{doc['content']}'") 
+                    # Если контент очень длинный, можно обрезать:
+                    # print(f"  - ID: {doc['id']}, Расстояние: {doc['distance']:.4f}, Контент: '{doc['content'][:100]}...'")
+                    
                 print("Генерация ответа с помощью Ollama...")
                 rag_response = generate_rag_response(user_query, retrieved_documents)
                 print("\n--- Ответ RAG ---")
