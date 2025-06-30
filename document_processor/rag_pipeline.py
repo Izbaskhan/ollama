@@ -1,4 +1,5 @@
 import os
+import re
 import psycopg2
 import requests
 from dotenv import load_dotenv
@@ -35,15 +36,26 @@ def extract_text_from_txt(txt_path):
         print(f"Ошибка при чтении файла '{txt_path}': {e}")
         return None
 
-def chunk_text(text, chunk_size=50, overlap=10):
-    """Разбивает текст на чанки с перекрытием."""
-    words = text.split()
+def chunk_text(text, chunk_size=1, overlap=0):
+    """Разбивает текст на чанки по предложениям с перекрытием."""
+    sentence_delimiters = r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)\s+'
+    all_sentences = [s.strip() for s in re.split(sentence_delimiters, text) if s.strip()] # Переименовал words в all_sentences
+    
     chunks = []
     i = 0
-    while i < len(words):
-        chunk = " ".join(words[i:i + chunk_size])
+    while i < len(all_sentences):
+        # chunk_size теперь относится к количеству предложений
+        current_chunk_sentences = all_sentences[i:i + chunk_size]
+        chunk = " ".join(current_chunk_sentences)
         chunks.append(chunk)
+        
+        # overlap теперь относится к количеству предложений
         i += chunk_size - overlap
+        
+        # Защита от бесконечного цикла, если overlap слишком большой
+        if i >= len(all_sentences):
+            break
+            
     return chunks
 
 def get_embedding(text, model=OLLAMA_EMBEDDING_MODEL):
