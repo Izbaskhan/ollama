@@ -1,0 +1,53 @@
+# Временные файлы и кэши
+*.py[cod]
+*$py.class
+*.so
+.Python
+__pycache__/
+
+# Логи и базы данных
+*.log
+*.sqlite
+*.db
+
+# Директории и файлы окружения
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Файлы IDE и редакторов
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Файлы сборки и дистрибуции
+build/
+dist/
+*.egg-info/
+*.egg
+*.manifest
+*.spec
+
+# Файлы тестов и покрытия
+.coverage
+htmlcov/
+.pytest_cache/
+*.cover
+*.py,cover
+
+# Jupyter ноутбуки
+.ipynb_checkpoints/
+
+# Файлы настроек
+*.cfg
+*.ini
+
+# Другое
+.DS_Store
+Thumbs.db
