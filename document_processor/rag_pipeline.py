@@ -99,11 +99,12 @@ def retrieve_documents(conn, query_embedding, top_k=5):
             sql = f"""
             SELECT id, content, metadata, embedding <=> %s::vector AS distance
             FROM documents
-            WHERE (embedding <=> %s::vector) <= 0.3 -- Ограничение по расстоянию, можно настроить
+            WHERE (embedding <=> %s::vector) <= %s -- Ограничение по расстоянию, можно настроить
             ORDER BY distance
             LIMIT %s;
             """
-            cur.execute(sql, (query_embedding, top_k))
+            max_distance_threshold = 0.3  # Порог расстояния, можно настроить
+            cur.execute(sql, (query_embedding, query_embedding, max_distance_threshold, top_k))
             results = cur.fetchall()
             documents = []
             for row in results:
