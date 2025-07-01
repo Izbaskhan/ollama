@@ -99,6 +99,7 @@ def retrieve_documents(conn, query_embedding, top_k=5):
             sql = f"""
             SELECT id, content, metadata, embedding <=> %s::vector AS distance
             FROM documents
+            WHERE (embedding <=> %s::vector) <= 0.3 -- Ограничение по расстоянию, можно настроить
             ORDER BY distance
             LIMIT %s;
             """
