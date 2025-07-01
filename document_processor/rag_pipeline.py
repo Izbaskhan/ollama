@@ -97,7 +97,7 @@ def retrieve_documents(conn, query_embedding, top_k=5):
     try:
         with conn.cursor() as cur:
             sql = f"""
-            SELECT id, content, metadata, embedding <-> %s::vector AS distance
+            SELECT id, content, metadata, embedding <=> %s::vector AS distance
             FROM documents
             ORDER BY distance
             LIMIT %s;
