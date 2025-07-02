@@ -5,3 +5,5 @@ requests                # Для HTTP-запросов к Ollama API
 pgvector
 pandas 
 openpyxl
+sentence-transformers
+scikit-learn

@@ -1,12 +1,13 @@
 import os
-import re
 import psycopg2
-import requests
 from dotenv import load_dotenv
 import json
 import uuid
 import pandas as pd
 from pgvector.psycopg2 import register_vector
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Загружаем переменные окружения из .env файла
 load_dotenv()
@@ -18,10 +19,8 @@ DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DB_HOST = "db"
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 
-OLLAMA_HOST = "ollama"
-OLLAMA_PORT = os.getenv("OLLAMA_PORT", "11434")
-OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
-OLLAMA_GENERATION_MODEL = os.getenv("OLLAMA_GENERATION_MODEL", "llama3")
+# Загрузка русскоязычной модели для эмбеддингов
+EMBEDDING_MODEL = SentenceTransformer("ai-forever/sbert_large_nlu_ru")
 
 # --- Функции для работы с Excel и RAG ---
 
@@ -58,21 +57,13 @@ def extract_data_from_excel(excel_path):
         print(f"Ошибка при чтении Excel файла '{excel_path}': {e}")
         return None
 
-def get_embedding(text, model=OLLAMA_EMBEDDING_MODEL):
-    """Получает векторное представление текста от Ollama."""
-    url = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}/api/embeddings"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "model": model,
-        "prompt": text
-    }
+def get_embedding(text):
+    """Получает векторное представление текста с помощью SentenceTransformer."""
     try:
-        response = requests.post(url, headers=headers, json=data)
-        response.raise_for_status()
-        embedding = response.json()["embedding"]
-        return embedding
-    except requests.exceptions.RequestException as e:
-        print(f"Ошибка при получении эмбеддинга от Ollama: {e}")
+        embedding = EMBEDDING_MODEL.encode(text)
+        return embedding.tolist()  # Преобразуем numpy array в список для PostgreSQL
+    except Exception as e:
+        print(f"Ошибка при получении эмбеддинга: {e}")
         return None
 
 def create_documents_table(conn):
@@ -171,7 +162,7 @@ def retrieve_documents(conn, query_embedding, top_k=5):
             ORDER BY distance
             LIMIT %s;
             """
-            max_distance_threshold = 0.6
+            max_distance_threshold = 1.0  # Более высокий порог для SentenceTransformer
             cur.execute(sql, (query_embedding, query_embedding, max_distance_threshold, top_k))
             results = cur.fetchall()
             documents = []
@@ -189,9 +180,11 @@ def retrieve_documents(conn, query_embedding, top_k=5):
         print(f"Ошибка при извлечении документов из БД: {e}")
         return []
 
-def generate_rag_response(query, retrieved_docs, model=OLLAMA_GENERATION_MODEL):
+def generate_rag_response(query, retrieved_docs):
     """Генерирует ответ с использованием контекста из извлеченных документов."""
     context = "\n\n".join([f"Раздел: {doc['section_title']}\n{doc['content']}" for doc in retrieved_docs])
+    
+    # Создаем промпт для генерации ответа
     prompt = f"""Используй следующий контекст для ответа на вопрос. Если ты не знаешь ответа на основе предоставленного контекста, просто скажи, что не можешь найти ответ. Отвечай кратко и по существу на русском языке.
 
 Контекст:
@@ -200,25 +193,13 @@ def generate_rag_response(query, retrieved_docs, model=OLLAMA_GENERATION_MODEL):
 Вопрос: {query}
 
 Ответ:"""
-
-    print("\n--- Отправляемый промпт в Ollama ---")
-    print(prompt)
-    print("------------------------------------\n")
     
-    url = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}/api/generate"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False
-    }
-    try:
-        response = requests.post(url, headers=headers, json=data)
-        response.raise_for_status()
-        return response.json()["response"]
-    except requests.exceptions.RequestException as e:
-        print(f"Ошибка при генерации ответа от Ollama: {e}")
-        return "Не удалось сгенерировать ответ."
+    # В этом примере просто возвращаем лучший результат (можно заменить на вызов LLM)
+    if retrieved_docs:
+        best_match = retrieved_docs[0]
+        return f"Наиболее релевантный ответ:\n\nРаздел: {best_match['section_title']}\n{best_match['content']}\n\n(Сходство: {best_match['distance']:.3f})"
+    else:
+        return "Не найдено релевантной информации в базе данных."
 
 # --- Основная логика скрипта ---
 if __name__ == "__main__":
@@ -286,7 +267,7 @@ if __name__ == "__main__":
                     print(f"  - Раздел: {doc['section_title']}, Расстояние: {doc['distance']:.4f}")
                     print(f"    Контент: '{doc['content'][:100]}...'")
                     
-                print("Генерация ответа с помощью Ollama...")
+                print("Формирование ответа...")
                 rag_response = generate_rag_response(user_query, retrieved_documents)
                 print("\n--- Ответ RAG ---")
                 print(rag_response)
