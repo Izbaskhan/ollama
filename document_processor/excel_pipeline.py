@@ -88,7 +88,7 @@ def create_documents_table(conn):
             CREATE TABLE documents_meta (
                 id UUID PRIMARY KEY,
                 content TEXT NOT NULL,
-                embedding vector(768),
+                embedding vector(1024),
                 metadata JSONB,
                 chunk_order INTEGER,
                 page_number INTEGER,
