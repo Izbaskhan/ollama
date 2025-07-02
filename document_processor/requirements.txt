@@ -3,3 +3,5 @@ python-dotenv           # Для чтения переменных окруже�
 psycopg2-binary         # PostgreSQL адаптер для Python
 requests                # Для HTTP-запросов к Ollama API
 pgvector
+pandas 
+openpyxl
