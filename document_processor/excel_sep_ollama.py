@@ -271,6 +271,7 @@ def generate_ollama_response(prompt: str, model: str = OLLAMA_GENERATION_MODEL) 
         print(f"Ошибка при генерации ответа от Ollama: {e}")
         return None
 
+
 def generate_rag_response(query: str, retrieved_sections: list) -> str:
     """Генерирует ответ с использованием контекста из извлеченных документов."""
     if not retrieved_sections:
@@ -304,21 +305,24 @@ def generate_rag_response(query: str, retrieved_sections: list) -> str:
     
     if llm_response:
         # Формируем финальный ответ с дополнительной информацией
-        response = (
-            f"Ответ:\n{llm_response}\n\n"
-            f"Источники:\n" + 
-            "\n".join([f"- {section['section_title'] (релевантность: {section['avg_similarity']:.3f})" 
-                      for section in retrieved_sections])
+        sources = "\n".join(
+            f"- {section['section_title']} (релевантность: {section['avg_similarity']:.3f})"
+            for section in retrieved_sections
         )
+        response = f"Ответ:\n{llm_response}\n\nИсточники:\n{sources}"
         return response
     else:
-        return "Не удалось получить ответ от модели. Вот наиболее релевантные разделы:\n\n" + \
-               "\n\n".join([f"{section['section_title']}:\n{section['content'][:200]}..." 
-                           for section in retrieved_sections])
+        sections_info = "\n\n".join(
+            f"{section['section_title']}:\n{section['content'][:200]}..."
+            for section in retrieved_sections
+        )
+        return f"Не удалось получить ответ от модели. Вот наиболее релевантные разделы:\n\n{sections_info}"
+
 
 # --- Основная логика скрипта ---
 if __name__ == "__main__":
-    excel_file = "Регламент_Технического_Обслуживания_Промышленной_Машины_А-3000_2025-07-01.xlsx"
+    # excel_file = "Регламент_Технического_Обслуживания_Промышленной_Машины_А-3000_2025-07-01.xlsx"
+    excel_file = "Регламент_ЕКС_векторизация.xlsx"
     if not os.path.exists(excel_file):
         print(f"Ошибка: Файл '{excel_file}' не найден. Пожалуйста, поместите его в текущую директорию.")
         exit(1)
