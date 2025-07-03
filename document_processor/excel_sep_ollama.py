@@ -374,7 +374,7 @@ if __name__ == "__main__":
                 continue
 
             print("Поиск релевантных разделов в базе данных...")
-            retrieved_sections = retrieve_sections(conn, query_embedding, top_k=2)
+            retrieved_sections = retrieve_sections(conn, query_embedding, top_k=10)
 
             if retrieved_sections:
                 print("\nНайдены следующие релевантные разделы:")
